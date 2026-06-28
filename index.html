@@ -117,6 +117,9 @@
     display:none;align-items:center;justify-content:center;}
   body.admin .tile .edit-pencil{display:flex;}
   body.admin .tile{cursor:default;touch-action:none;}
+  .tile.back-tile{background:#fff !important;color:var(--ink) !important;border:2px solid var(--line);}
+  .tile.back-tile .emoji{color:var(--accent);}
+  .tile.back-tile .label{text-shadow:none;color:var(--ink);}
   .tile.drag-src{opacity:.30;}
   .tile.drag-over{outline:5px solid rgba(255,255,255,.95);outline-offset:-5px;}
   .tile.drag-clone{position:fixed;z-index:200;pointer-events:none;opacity:.93;
@@ -463,16 +466,29 @@ function render(){
 
   var b=currentBoard();
   var arr=b.arr;
-  document.getElementById("back").classList.toggle("show", path.length>0);
+  var inSub = path.length>0;
+  document.getElementById("back").style.display="none";   // replaced by an in-grid tile
   document.getElementById("crumbLabel").textContent = b.parent ? b.parent.label : "";
 
-  var pages = Math.max(1, Math.ceil((arr.length + (admin?1:0)) / PAGE));
+  var perPage = inSub ? (PAGE-1) : PAGE;     // reserve slot 0 for Back on sub-boards
+  var extras  = admin ? 1 : 0;
+  var pages = Math.max(1, Math.ceil((arr.length + extras) / perPage));
   if(page>=pages) page=pages-1;
 
   var grid=document.getElementById("grid");
   grid.innerHTML="";
-  var start=page*PAGE;
-  var slice=arr.slice(start, start+PAGE);
+
+  // Back tile — same size as the others, always first cell on a sub-board
+  if(inSub){
+    var bk=document.createElement("button");
+    bk.className="tile back-tile";
+    bk.innerHTML='<div class="emoji">↩︎</div><div class="label">Back to<br>main menu</div>';
+    bk.onclick=function(){ if(suppressClick){ suppressClick=false; return; } path=[]; page=0; render(); };
+    grid.appendChild(bk);
+  }
+
+  var start=page*perPage;
+  var slice=arr.slice(start, start+perPage);
 
   slice.forEach(function(tile, idx){
     var realIndex=start+idx;
@@ -491,7 +507,7 @@ function render(){
   });
 
   // "add" tile fills the last slot on the last page in admin mode
-  if(admin && slice.length<PAGE){
+  if(admin && (slice.length + (inSub?1:0)) < PAGE){
     var add=document.createElement("button");
     add.className="tile add";
     add.innerHTML='<div class="emoji">＋</div><div class="label">Add tile</div>';
