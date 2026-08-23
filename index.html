@@ -60,7 +60,7 @@
     display:flex;align-items:center;gap:10px;
     padding:10px 16px 4px;
   }
-  #title{font-size:18px;font-weight:800;color:var(--muted);letter-spacing:.4px;flex:1;
+  #title{font-size:18px;font-weight:800;color:var(--muted);letter-spacing:.4px;flex:0 1 auto;min-width:0;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .iconbtn{
     border:none;background:#fff;border:1px solid var(--line);
@@ -72,6 +72,18 @@
   .iconbtn.on{background:var(--accent);color:#fff;border-color:var(--accent);}
   .admin-only{display:none;}
   body.admin .admin-only{display:flex;}
+
+  /* ---- keyboard button in the top bar (always visible) ---- */
+  .bar-spacer{flex:1 1 auto;}
+  #kbBtn{
+    display:flex;align-items:center;gap:9px;border:none;background:var(--accent);color:#fff;
+    height:54px;padding:0 20px;border-radius:16px;cursor:pointer;flex:0 0 auto;
+    box-shadow:0 3px 8px rgba(59,125,110,.30);font-family:inherit;
+  }
+  #kbBtn:active{transform:scale(.96);}
+  #kbBtn .kbico{font-size:30px;line-height:1;}
+  #kbBtn .kblabel{font-size:21px;font-weight:800;letter-spacing:.3px;}
+  @media (max-width:420px){ #kbBtn .kblabel{display:none;} #kbBtn{padding:0 16px;} }
 
   /* ---- board area ---- */
   #stage{flex:1 1 auto;position:relative;display:flex;flex-direction:column;
@@ -189,6 +201,35 @@
   .key.blank{visibility:hidden;border:none;background:none;}
   .shake{animation:shake .42s;}
   @keyframes shake{0%,100%{transform:translateX(0);}20%{transform:translateX(-9px);}60%{transform:translateX(9px);}}
+
+  /* ---- full-screen typing keyboard ---- */
+  #kbScreen{position:fixed;inset:0;z-index:60;background:var(--canvas);
+    display:none;flex-direction:column;padding:10px 12px 12px;}
+  #kbScreen.show{display:flex;}
+  #kbTop{flex:0 0 auto;display:flex;align-items:center;gap:12px;margin-bottom:8px;}
+  #kbClose{border:none;background:#fff;border:1px solid var(--line);border-radius:14px;
+    font:inherit;font-weight:800;font-size:20px;color:var(--accent);padding:11px 16px;cursor:pointer;
+    box-shadow:0 2px 4px rgba(0,0,0,.04);}
+  #kbClose:active{transform:scale(.96);}
+  #kbTitle{font-weight:800;color:var(--muted);font-size:18px;}
+  #kbText{flex:0 0 auto;min-height:90px;max-height:26vh;overflow-y:auto;background:#fff;
+    border:1px solid var(--line);border-radius:18px;padding:16px 20px;margin-bottom:10px;
+    font-size:clamp(28px,5.2vw,46px);font-weight:800;color:var(--ink);line-height:1.15;cursor:pointer;
+    word-break:break-word;}
+  #kbText .ph{color:var(--muted);font-weight:700;}
+  #kbSpeak{flex:0 0 auto;height:66px;margin-bottom:12px;border:none;border-radius:16px;
+    background:var(--accent);color:#fff;font-family:inherit;font-size:26px;font-weight:800;cursor:pointer;
+    box-shadow:0 4px 10px rgba(59,125,110,.32);}
+  #kbSpeak:active{transform:scale(.98);}
+  #kbKeys{flex:1 1 auto;display:flex;flex-direction:column;gap:9px;min-height:0;}
+  .kbrow{flex:1 1 0;display:flex;gap:9px;min-height:0;}
+  .kbkey{flex:1 1 0;border:1px solid var(--line);background:#fff;border-radius:14px;
+    font-family:inherit;font-size:clamp(20px,3.8vw,34px);font-weight:800;color:var(--ink);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,.05);padding:0;}
+  .kbkey:active{transform:scale(.95);background:#efeae1;}
+  .kbkey.action{background:#f0ece4;font-size:clamp(16px,2.8vw,24px);}
+  .kbkey.wide{flex:1.6 1 0;}
+  .kbkey.space{flex:4 1 0;font-size:clamp(15px,2.6vw,22px);color:var(--muted);}
 </style>
 </head>
 <body>
@@ -197,6 +238,8 @@
 
   <div id="bar">
     <div id="title">TalkBoard</div>
+    <button id="kbBtn" title="Type to talk"><span class="kbico">⌨️</span><span class="kblabel">Type</span></button>
+    <div class="bar-spacer"></div>
     <button class="iconbtn admin-only" id="addPrimary" title="Add tile">＋</button>
     <button class="iconbtn admin-only" id="menuBtn" title="Settings">⚙️</button>
     <button class="iconbtn" id="lockBtn" title="Edit mode">🔓</button>
@@ -317,6 +360,17 @@
     <div class="keypad" id="keypad"></div>
     <button class="btn ghost" id="pinCancel" style="margin-top:16px;">Cancel</button>
   </div>
+</div>
+
+<!-- Full-screen typing keyboard -->
+<div id="kbScreen">
+  <div id="kbTop">
+    <button id="kbClose">‹ Board</button>
+    <div id="kbTitle">Type to talk</div>
+  </div>
+  <div id="kbText" onclick="kbReSpeak()"><span class="ph">Type here, then tap Speak</span></div>
+  <button id="kbSpeak">🔊 Speak</button>
+  <div id="kbKeys"></div>
 </div>
 
 <script>
@@ -644,6 +698,7 @@ document.getElementById("stage").addEventListener("touchend",function(e){
 },{passive:true});
 document.addEventListener("keydown",function(e){
   if(document.querySelector(".scrim.show")) return;
+  if(document.getElementById("kbScreen").classList.contains("show")) return;
   if(e.key==="ArrowRight" && page<window._pages-1){page++;render();}
   if(e.key==="ArrowLeft" && page>0){page--;render();}
 });
@@ -850,6 +905,62 @@ function pinPress(n){
   });
 })();
 document.getElementById("pinCancel").onclick=function(){ document.getElementById("pinScrim").classList.remove("show"); };
+
+/* ---------------- typing keyboard ---------------- */
+var kbText="";
+var KB_BUILT=false;
+function kbRender(){
+  var el=document.getElementById("kbText");
+  if(kbText){ el.textContent=kbText; }
+  else { el.innerHTML='<span class="ph">Type here, then tap Speak</span>'; }
+  el.scrollTop=el.scrollHeight;
+}
+function kbInsert(ch){ kbText+=ch; kbRender(); }
+function kbBackspace(){ kbText=kbText.slice(0,-1); kbRender(); }
+function kbClear(){ kbText=""; kbRender(); }
+function kbSpeak(){ var t=kbText.trim(); if(t) speak(t); }
+function kbReSpeak(){ var t=kbText.trim(); if(t) speak(t); }
+function buildKeys(){
+  if(KB_BUILT) return; KB_BUILT=true;
+  var keys=document.getElementById("kbKeys");
+  var rows=[
+    ["q","w","e","r","t","y","u","i","o","p"],
+    ["a","s","d","f","g","h","j","k","l"],
+    ["z","x","c","v","b","n","m",",",".","?"]
+  ];
+  rows.forEach(function(r){
+    var row=document.createElement("div"); row.className="kbrow";
+    r.forEach(function(ch){
+      var k=document.createElement("button"); k.className="kbkey";
+      k.textContent = /[a-z]/.test(ch) ? ch.toUpperCase() : ch;
+      k.onclick=function(){ kbInsert(ch); };
+      row.appendChild(k);
+    });
+    keys.appendChild(row);
+  });
+  var arow=document.createElement("div"); arow.className="kbrow";
+  var back=document.createElement("button"); back.className="kbkey action wide"; back.textContent="⌫";
+  back.onclick=kbBackspace;
+  var space=document.createElement("button"); space.className="kbkey space"; space.textContent="space";
+  space.onclick=function(){ kbInsert(" "); };
+  var clr=document.createElement("button"); clr.className="kbkey action wide"; clr.textContent="Clear";
+  clr.onclick=kbClear;
+  arow.appendChild(back); arow.appendChild(space); arow.appendChild(clr);
+  keys.appendChild(arow);
+}
+function openKeyboard(){ buildKeys(); kbRender(); document.getElementById("kbScreen").classList.add("show"); }
+function closeKeyboard(){ document.getElementById("kbScreen").classList.remove("show"); }
+document.getElementById("kbBtn").onclick=openKeyboard;
+document.getElementById("kbClose").onclick=closeKeyboard;
+document.getElementById("kbSpeak").onclick=kbSpeak;
+document.addEventListener("keydown",function(e){
+  if(!document.getElementById("kbScreen").classList.contains("show")) return;
+  if(e.key==="Enter"){ e.preventDefault(); kbSpeak(); return; }
+  if(e.key==="Backspace"){ e.preventDefault(); kbBackspace(); return; }
+  if(e.key==="Escape"){ closeKeyboard(); return; }
+  if(e.key===" "){ e.preventDefault(); kbInsert(" "); return; }
+  if(e.key && e.key.length===1 && /[a-z0-9 ,.?!'\-]/i.test(e.key)){ e.preventDefault(); kbInsert(e.key.toLowerCase()); }
+});
 
 /* ---------------- iOS speech primer (unlock audio on first touch) ---------------- */
 var primed=false;
