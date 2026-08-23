@@ -451,6 +451,7 @@ if(!model.title || model.title==="TalkBoard"){ model.title="Lori's Voice"; save(
 
 /* ---------------- view state ---------------- */
 var path=[];     // array of tile ids into the tree; [] = root
+var pageStack=[];// the main-menu page you were on before drilling into a group
 var page=0;
 var admin=false;
 var PAGE=6;
@@ -459,7 +460,7 @@ function currentBoard(){
   var arr=model.tiles, parent=null;
   for(var i=0;i<path.length;i++){
     parent = arr.find(function(t){return t.id===path[i];});
-    if(!parent){ path=path.slice(0,i); break; }
+    if(!parent){ path=path.slice(0,i); pageStack=pageStack.slice(0,i); break; }
     arr = parent.children;
   }
   return {arr:arr, parent:parent};
@@ -550,7 +551,7 @@ function render(){
     var bk=document.createElement("button");
     bk.className="tile back-tile";
     bk.innerHTML='<div class="emoji">↩︎</div><div class="label">Back to<br>main menu</div>';
-    bk.onclick=function(){ if(suppressClick){ suppressClick=false; return; } path=[]; page=0; render(); };
+    bk.onclick=function(){ if(suppressClick){ suppressClick=false; return; } var rp=pageStack.length?pageStack[0]:0; path=[]; pageStack=[]; page=rp; render(); };
     grid.appendChild(bk);
   }
 
@@ -680,11 +681,11 @@ function onTile(tile, arr, index){
     render();
   }, 900);
   if(tile.children && tile.children.length){
-    setTimeout(function(){ path.push(tile.id); page=0; render(); }, 380);
+    setTimeout(function(){ pageStack.push(page); path.push(tile.id); page=0; render(); }, 380);
   }
 }
 
-document.getElementById("back").onclick=function(){ path.pop(); page=0; render(); };
+document.getElementById("back").onclick=function(){ path.pop(); page=pageStack.pop()||0; render(); };
 document.getElementById("banner").onclick=function(){ if(window.lastPhrase) speak(window.lastPhrase); };
 document.getElementById("lockBtn").onclick=function(){
   if(admin){ admin=false; page=0; render(); }   // leaving edit mode is free
