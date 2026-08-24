@@ -313,6 +313,16 @@
       <input type="text" id="fTitle">
     </div>
     <div class="field">
+      <label>Name for the hello message</label>
+      <input type="text" id="fOwner" placeholder="e.g. Lori">
+      <div class="hintline">Shown in the greeting, e.g. “Good morning, Lori 💗”.</div>
+    </div>
+    <div class="field">
+      <label>Color theme</label>
+      <div class="swatches" id="themeSwatches"></div>
+      <div class="hintline">Sets the app’s accent color — buttons, the keyboard, highlights. Tiles keep their own colors.</div>
+    </div>
+    <div class="field">
       <label>Tiles per page</label>
       <div style="display:flex;gap:10px;">
         <button class="btn ghost" id="size6" style="flex:1;">6 tiles</button>
@@ -536,6 +546,8 @@ function render(){
   document.getElementById("lockBtn").textContent = admin ? "🔒" : "🔓";
   document.getElementById("lockBtn").classList.toggle("on", admin);
   document.getElementById("title").textContent = model.title;
+  document.title = model.title;
+  applyTheme();
 
   var b=currentBoard();
   var arr=b.arr;
@@ -816,6 +828,8 @@ document.getElementById("doneTile").onclick=function(){ backOrClose(); };
 /* ---------------- settings ---------------- */
 document.getElementById("menuBtn").onclick=function(){
   document.getElementById("fTitle").value=model.title;
+  document.getElementById("fOwner").value=model.owner||"Lori";
+  buildThemeSwatches();
   markSize(); fillVoices(); markRate();
   document.getElementById("menuScrim").classList.add("show");
 };
@@ -857,7 +871,33 @@ function markSize(){
 }
 document.getElementById("size6").onclick=function(){ setSize(6); };
 document.getElementById("size4").onclick=function(){ setSize(4); };
-document.getElementById("fTitle").oninput=function(){ model.title=this.value; save(); document.getElementById("title").textContent=model.title; };
+document.getElementById("fTitle").oninput=function(){ model.title=this.value; save(); document.getElementById("title").textContent=model.title; document.title=model.title; };
+document.getElementById("fOwner").oninput=function(){
+  model.owner=this.value; save();
+  var b=document.getElementById("banner");
+  if(b.classList.contains("greet")) b.textContent=greeting();
+};
+var THEMES={
+  teal:{name:"Teal",accent:"#3b7d6e"},
+  ocean:{name:"Ocean",accent:"#3f6cae"},
+  plum:{name:"Plum",accent:"#7a5aa6"},
+  rose:{name:"Rose",accent:"#b0517a"},
+  amber:{name:"Amber",accent:"#b07a2e"},
+  slate:{name:"Slate",accent:"#4f5a6b"}
+};
+function applyTheme(){ var t=THEMES[model.theme]||THEMES.teal; document.documentElement.style.setProperty("--accent",t.accent); }
+function buildThemeSwatches(){
+  var wrap=document.getElementById("themeSwatches"); if(!wrap) return;
+  wrap.innerHTML="";
+  Object.keys(THEMES).forEach(function(k){
+    var s=document.createElement("div");
+    s.className="sw"+(((model.theme||"teal")===k)?" sel":"");
+    s.style.background=THEMES[k].accent; s.title=THEMES[k].name;
+    s.onclick=function(){ model.theme=k; save(); applyTheme();
+      document.querySelectorAll("#themeSwatches .sw").forEach(function(x){x.classList.remove("sel");}); s.classList.add("sel"); };
+    wrap.appendChild(s);
+  });
+}
 document.getElementById("closeMenu").onclick=function(){ document.getElementById("menuScrim").classList.remove("show"); };
 document.getElementById("exportBtn").onclick=function(){
   var blob=new Blob([JSON.stringify(model,null,2)],{type:"application/json"});
@@ -996,7 +1036,7 @@ setTimeout(loadVoices,300); setTimeout(loadVoices,1200);
 function greeting(){
   var h=new Date().getHours();
   var part = h<12 ? "Good morning" : (h<17 ? "Good afternoon" : "Good evening");
-  return part+", "+OWNER+" 💗";
+  return part+", "+(model.owner||OWNER)+" 💗";
 }
 (function(){
   var b=document.getElementById("banner");
