@@ -230,6 +230,8 @@
   .kbkey.action{background:#f0ece4;font-size:clamp(16px,2.8vw,24px);}
   .kbkey.wide{flex:1.6 1 0;}
   .kbkey.space{flex:4 1 0;font-size:clamp(15px,2.6vw,22px);color:var(--muted);}
+.helpsec{font-size:14.5px;line-height:1.5;color:#3a382f;margin-bottom:12px;}
+  .helpsec b{color:var(--ink);}
 </style>
 </head>
 <body>
@@ -242,6 +244,7 @@
     <div class="bar-spacer"></div>
     <button class="iconbtn admin-only" id="addPrimary" title="Add tile">＋</button>
     <button class="iconbtn admin-only" id="menuBtn" title="Settings">⚙️</button>
+    <button class="iconbtn" id="infoBtn" title="Help & info">ℹ️</button>
     <button class="iconbtn" id="lockBtn" title="Edit mode">🔓</button>
   </div>
 
@@ -343,11 +346,43 @@
         <button class="btn ghost" id="spdNorm" style="flex:1;">Normal</button>
       </div>
     </div>
+    <div class="field">
+      <label>Edit PIN (4 digits)</label>
+      <input type="text" id="fPin" inputmode="numeric" maxlength="4" placeholder="1234" style="width:120px;text-align:center;letter-spacing:4px;font-size:18px;">
+      <div class="hintline">The code needed to enter edit mode. Change it to personalize this device.</div>
+    </div>
     <button class="menu-item" id="exportBtn">⬇️  Save board to a file (backup)</button>
     <button class="menu-item" id="importBtn">⬆️  Load board from a file</button>
     <input type="file" id="importFile" accept="application/json" style="display:none;">
     <button class="menu-item" id="resetBtn" style="color:#c0392b;">↺  Reset to the starter board</button>
     <button class="btn ghost" id="closeMenu" style="margin-top:6px;">Close</button>
+  </div>
+</div>
+
+<!-- Help & info -->
+<div class="scrim" id="infoScrim">
+  <div class="sheet">
+    <h2>Help &amp; Info</h2>
+    <div class="helpsec"><b>Talking:</b> Tap any tile to say it out loud. A tile with a small number badge opens more choices inside it. Swipe left/right — or use the ‹ › arrows — for more pages. Tap the dark top bar to repeat the last phrase.</div>
+    <div class="helpsec"><b>Typing:</b> Tap <b>⌨️ Type</b> at the top to open the keyboard, type a message, and tap <b>🔊 Speak</b>.</div>
+    <div class="helpsec"><b>Editing the board:</b> Tap the <b>🔓 lock</b> and enter the edit PIN. In edit mode you can add a tile (the dashed <b>＋ Add tile</b>), edit a tile (the <b>✏️</b> on each one), drag tiles to reorder, add sub-tiles inside a tile, and delete tiles. Tap the lock again to leave edit mode.</div>
+    <div class="helpsec"><b>Settings (⚙️, in edit mode):</b> Change the board name, the greeting name, the color theme, tiles per page, the voice and speaking speed, and back up or restore the board.</div>
+    <div class="helpsec"><b>Natural voice on iPad:</b> Settings → Accessibility → Spoken Content → Voices → download an “Enhanced” voice, then choose it in ⚙️ → Voice.</div>
+    <div class="helpsec"><b>Backup / copy to another device:</b> ⚙️ → “Save board to a file”, then “Load board from a file” on the other device.</div>
+
+    <div class="field">
+      <label>Edit PIN</label>
+      <button class="btn ghost" id="revealPin" style="width:auto;padding:8px 16px;">Show edit PIN</button>
+      <span id="pinReveal" style="display:none;margin-left:12px;font-weight:800;font-size:22px;letter-spacing:4px;color:var(--accent);"></span>
+    </div>
+
+    <div class="field">
+      <label>Notes for this device</label>
+      <textarea id="infoNotes" placeholder="e.g. Managed by ___.  Questions? Call ___."></textarea>
+      <div class="hintline" id="infoNotesHint">Unlock (🔓) to edit these notes.</div>
+    </div>
+
+    <button class="btn ghost" id="closeInfo">Close</button>
   </div>
 </div>
 
@@ -839,6 +874,7 @@ document.getElementById("doneTile").onclick=function(){ backOrClose(); };
 document.getElementById("menuBtn").onclick=function(){
   document.getElementById("fTitle").value=model.title;
   document.getElementById("fOwner").value=model.owner||"Lori";
+  document.getElementById("fPin").value=model.pin||"1234";
   buildThemeSwatches();
   markSize(); fillVoices(); markRate();
   document.getElementById("menuScrim").classList.add("show");
@@ -909,6 +945,22 @@ function buildThemeSwatches(){
   });
 }
 document.getElementById("closeMenu").onclick=function(){ document.getElementById("menuScrim").classList.remove("show"); };
+document.getElementById("fPin").oninput=function(){ this.value=this.value.replace(/[^0-9]/g,""); model.pin=this.value; save(); };
+document.getElementById("infoBtn").onclick=function(){
+  var notes=document.getElementById("infoNotes");
+  notes.value=model.infoNotes||"";
+  notes.readOnly=!admin;
+  document.getElementById("infoNotesHint").style.display=admin?"none":"block";
+  var pr=document.getElementById("pinReveal"); pr.style.display="none"; pr.textContent="";
+  document.getElementById("revealPin").style.display="inline-block";
+  document.getElementById("infoScrim").classList.add("show");
+};
+document.getElementById("revealPin").onclick=function(){
+  var pr=document.getElementById("pinReveal");
+  pr.textContent=model.pin||"1234"; pr.style.display="inline-block"; this.style.display="none";
+};
+document.getElementById("infoNotes").oninput=function(){ if(!admin) return; model.infoNotes=this.value; save(); };
+document.getElementById("closeInfo").onclick=function(){ document.getElementById("infoScrim").classList.remove("show"); };
 document.getElementById("exportBtn").onclick=function(){
   var blob=new Blob([JSON.stringify(model,null,2)],{type:"application/json"});
   var a=document.createElement("a"); a.href=URL.createObjectURL(blob);
@@ -950,7 +1002,7 @@ function pinPress(n){
   pinEntry+=n; drawPinDots();
   if(pinEntry.length===4){
     setTimeout(function(){
-      if(pinEntry===ADMIN_PIN){
+      if(pinEntry===(model.pin||ADMIN_PIN)){
         document.getElementById("pinScrim").classList.remove("show");
         admin=true; page=0; render();
       } else {
