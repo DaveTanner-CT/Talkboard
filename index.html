@@ -529,6 +529,16 @@ function speak(text){
   }catch(e){}
   var b=document.getElementById("banner");
   b.textContent=text; b.classList.add("active"); b.classList.remove("greet");
+  clearTimeout(bannerTimer);
+  bannerTimer=setTimeout(resetBanner, 8000);
+}
+var bannerTimer=null;
+function resetBanner(){
+  var b=document.getElementById("banner");
+  b.textContent=greeting();
+  b.classList.add("greet");
+  b.classList.remove("active");
+  window.lastPhrase=null;
 }
 
 /* ---------------- contrast ---------------- */
