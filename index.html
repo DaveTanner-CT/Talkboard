@@ -237,6 +237,8 @@
   .info-footer .credit a{color:var(--accent);font-weight:700;text-decoration:none;}
   .info-footer .credit a:hover{text-decoration:underline;}
   .linklike{background:none;border:none;color:var(--accent);font:inherit;font-weight:800;font-size:15px;cursor:pointer;padding:8px 0 0;text-decoration:underline;}
+  .tile-img{width:clamp(52px,15vw,110px);height:clamp(52px,15vw,110px);object-fit:cover;border-radius:16px;box-shadow:0 2px 6px rgba(0,0,0,.22);}
+  #tilePhotoPreview{max-width:120px;max-height:120px;object-fit:cover;border-radius:12px;border:1px solid var(--line);display:block;margin-bottom:8px;}
 </style>
 </head>
 <body>
@@ -276,6 +278,15 @@
       <label>Symbol</label>
       <div class="picks" id="emojiPicks"></div>
       <input type="text" id="fEmoji" maxlength="4" placeholder="or paste any emoji" style="margin-top:8px;width:120px;text-align:center;font-size:24px;">
+    </div>
+    <div class="field">
+      <label>Photo (optional)</label>
+      <div id="tilePhotoWrap" style="display:none;">
+        <img id="tilePhotoPreview" src="" alt="">
+        <button class="btn ghost" id="tilePhotoRemove" style="width:auto;padding:8px 14px;">Remove photo</button>
+      </div>
+      <input type="file" id="tilePhotoInput" accept="image/*">
+      <div class="hintline">Use a photo — like a loved one's face — instead of the symbol on this tile. It's saved on this device only.</div>
     </div>
     <div class="field">
       <label>Word on the tile</label>
@@ -653,8 +664,10 @@ function render(){
     el.style.background=tile.color;
     el.style.color=textOn(tile.color);
     var fork = (tile.children&&tile.children.length) ? '<div class="fork-dot">'+tile.children.length+'</div>' : '';
-    el.innerHTML='<div class="edit-pencil">✏️</div>'+fork+
-      '<div class="emoji">'+(tile.emoji||"·")+'</div>'+
+    var face = tile.image
+      ? '<img class="tile-img" src="'+tile.image+'" alt="">'
+      : '<div class="emoji">'+(tile.emoji||"·")+'</div>';
+    el.innerHTML='<div class="edit-pencil">✏️</div>'+fork+ face +
       '<div class="label">'+escapeHtml(tile.label)+'</div>';
     el.dataset.idx=realIndex;
     el.onclick=function(){ if(suppressClick){ suppressClick=false; return; } onTile(tile, arr, realIndex); };
@@ -821,6 +834,9 @@ function showEditor(){
   document.getElementById("fEmoji").value=tile.emoji||"";
   document.getElementById("fLabel").value=tile.label||"";
   document.getElementById("fSpeak").value=tile.speak||"";
+  var tpw=document.getElementById("tilePhotoWrap"), tpp=document.getElementById("tilePhotoPreview");
+  if(tile.image){ tpp.src=tile.image; tpw.style.display="block"; } else { tpp.src=""; tpw.style.display="none"; }
+  document.getElementById("tilePhotoInput").value="";
 
   var ep=document.getElementById("emojiPicks"); ep.innerHTML="";
   EMOJI_PICKS.forEach(function(em){
@@ -840,7 +856,7 @@ function showEditor(){
 }
 function backOrClose(){
   var t=editing.tile;   // auto-remove a tile left completely empty
-  if(!t.emoji && !t.label && (!t.children||!t.children.length)){
+  if(!t.emoji && !t.image && !t.label && (!t.children||!t.children.length)){
     var i=editing.arr.indexOf(t); if(i>-1) editing.arr.splice(i,1);
   }
   save();
@@ -853,7 +869,8 @@ function renderForks(){
   var kids=tile.children||[];
   kids.forEach(function(ch, i){
     var row=document.createElement("div"); row.className="forkrow";
-    row.innerHTML='<span class="fe">'+(ch.emoji||"·")+'</span><span class="fl">'+escapeHtml(ch.label||"(untitled)")+'</span>';
+    var fface = ch.image ? '<img src="'+ch.image+'" style="width:26px;height:26px;object-fit:cover;border-radius:6px;display:block;">' : (ch.emoji||"·");
+    row.innerHTML='<span class="fe">'+fface+'</span><span class="fl">'+escapeHtml(ch.label||"(untitled)")+'</span>';
     var up=document.createElement("button"); up.textContent="▲";
     up.onclick=function(){ if(i>0){ var x=kids.splice(i,1)[0]; kids.splice(i-1,0,x); save(); renderForks(); } };
     var dn=document.createElement("button"); dn.textContent="▼";
@@ -869,6 +886,36 @@ function renderForks(){
 document.getElementById("fEmoji").oninput=function(){ editing.tile.emoji=this.value; save(); };
 document.getElementById("fLabel").oninput=function(){ editing.tile.label=this.value; save(); };
 document.getElementById("fSpeak").oninput=function(){ editing.tile.speak=this.value; save(); };
+function imageToDataURL(file, max, cb){
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var img=new Image();
+    img.onload=function(){
+      var scale=Math.min(1, max/Math.max(img.width,img.height));
+      var w=Math.round(img.width*scale), hh=Math.round(img.height*scale);
+      var c=document.createElement("canvas"); c.width=w; c.height=hh;
+      c.getContext("2d").drawImage(img,0,0,w,hh);
+      cb(c.toDataURL("image/jpeg",0.82));
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+document.getElementById("tilePhotoInput").onchange=function(e){
+  var f=e.target.files[0]; if(!f) return;
+  imageToDataURL(f, 240, function(dataUrl){
+    editing.tile.image=dataUrl; save();
+    var tpw=document.getElementById("tilePhotoWrap"), tpp=document.getElementById("tilePhotoPreview");
+    tpp.src=dataUrl; tpw.style.display="block";
+    render();
+  });
+};
+document.getElementById("tilePhotoRemove").onclick=function(){
+  delete editing.tile.image; save();
+  document.getElementById("tilePhotoWrap").style.display="none";
+  document.getElementById("tilePhotoInput").value="";
+  render();
+};
 document.getElementById("addFork").onclick=function(){
   if(!editing.tile.children) editing.tile.children=[];
   var c={id:uid(),emoji:"",label:"",speak:"",color:editing.tile.color,children:[]};
