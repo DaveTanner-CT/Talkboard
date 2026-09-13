@@ -232,6 +232,11 @@
   .kbkey.space{flex:4 1 0;font-size:clamp(15px,2.6vw,22px);color:var(--muted);}
 .helpsec{font-size:14.5px;line-height:1.5;color:#3a382f;margin-bottom:12px;}
   .helpsec b{color:var(--ink);}
+  .info-footer{border-top:1px solid var(--line);margin-top:4px;padding-top:14px;}
+  .info-footer .credit{font-size:13px;color:var(--muted);line-height:1.55;}
+  .info-footer .credit a{color:var(--accent);font-weight:700;text-decoration:none;}
+  .info-footer .credit a:hover{text-decoration:underline;}
+  .linklike{background:none;border:none;color:var(--accent);font:inherit;font-weight:800;font-size:15px;cursor:pointer;padding:8px 0 0;text-decoration:underline;}
 </style>
 </head>
 <body>
@@ -382,7 +387,28 @@
       <div class="hintline" id="infoNotesHint">Unlock (🔓) to edit these notes.</div>
     </div>
 
-    <button class="btn ghost" id="closeInfo">Close</button>
+    <div class="info-footer">
+      <div class="credit">
+        Lori's Voice, developed by Dave Tanner &nbsp;|&nbsp;
+        <a href="https://www.scriptingforschools.org" target="_blank" rel="noopener">www.scriptingforschools.org</a>
+      </div>
+      <button class="linklike" id="privacyLink">Data &amp; Privacy</button>
+    </div>
+
+    <button class="btn ghost" id="closeInfo" style="margin-top:12px;">Close</button>
+  </div>
+</div>
+
+<!-- Data & privacy -->
+<div class="scrim" id="privacyScrim">
+  <div class="sheet">
+    <h2>Data &amp; Privacy</h2>
+    <div class="helpsec"><b>Where your changes are saved.</b> Everything you set up — your tiles and words, the board name, the greeting, colors, voice, speaking speed, PIN, and notes — is saved only on this device, in the web browser's own storage. It stays on the device.</div>
+    <div class="helpsec"><b>Nothing is sent anywhere.</b> There is no account and no sign-in. The app does not send your board, your words, or anything you type to any website, server, or company. There is no tracking and no advertising.</div>
+    <div class="helpsec"><b>Speaking.</b> When you tap a tile or use the keyboard, the app uses your device's own built-in voice to say the words out loud. What you tap or type is not saved after it is spoken.</div>
+    <div class="helpsec"><b>Keep a backup.</b> Because everything lives on this one device, it is a good idea to keep a copy. In Settings, tap “Save board to a file.” If the device is reset, its browser data is cleared, or the app is removed, the saved board can be lost — a backup lets you restore it, or copy it to another device with “Load board from a file.”</div>
+    <div class="helpsec"><b>Each device is separate.</b> Every device keeps its own copy. To use the same board on another device, save it to a file here and load that file there.</div>
+    <button class="btn ghost" id="closePrivacy">Close</button>
   </div>
 </div>
 
@@ -961,6 +987,8 @@ document.getElementById("revealPin").onclick=function(){
 };
 document.getElementById("infoNotes").oninput=function(){ if(!admin) return; model.infoNotes=this.value; save(); };
 document.getElementById("closeInfo").onclick=function(){ document.getElementById("infoScrim").classList.remove("show"); };
+document.getElementById("privacyLink").onclick=function(){ document.getElementById("privacyScrim").classList.add("show"); };
+document.getElementById("closePrivacy").onclick=function(){ document.getElementById("privacyScrim").classList.remove("show"); };
 document.getElementById("exportBtn").onclick=function(){
   var blob=new Blob([JSON.stringify(model,null,2)],{type:"application/json"});
   var a=document.createElement("a"); a.href=URL.createObjectURL(blob);
